@@ -1,0 +1,50 @@
+{
+  // 根级 TypeScript 配置:仅服务于 .py 对照翻译件的编辑器阅读体验。
+  // 这些 .ts 是逐行翻译产物,import 只是示意 Python 依赖,并非可运行工程,
+  // 因此这里刻意放宽检查(strict:false、noEmit、skipLibCheck),尽量减少红色报错。
+  // 注意:纯语法错误(个别文件中保留的 Python 惯用法)无法靠配置消除。
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2020"],
+    "types": ["node"],
+    "noEmit": true,
+    "strict": false,
+    "checkJs": false,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": [
+    "s01_agent_loop/**/*.ts",
+    "s02_tool_use/**/*.ts",
+    "s03_permission/**/*.ts",
+    "s04_hooks/**/*.ts",
+    "s05_todo_write/**/*.ts",
+    "s06_subagent/**/*.ts",
+    "s07_skill_loading/**/*.ts",
+    "s08_context_compact/**/*.ts",
+    "s09_memory/**/*.ts",
+    "s10_task_system/**/*.ts",
+    "s11_background_tasks/**/*.ts",
+    "s12_cron_scheduler/**/*.ts",
+    "s13_agent_teams/**/*.ts",
+    "s14_mcp_plugin/**/*.ts",
+    "s15_integrated_harness/**/*.ts",
+    "s16_workflow_runtime/**/*.ts",
+    "s17_goal_loop/**/*.ts",
+    "agents/**/*.ts",
+    "tests/**/*.ts",
+    "skills/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "web"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "learn-claude-code",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TypeScript 对照阅读件的最小配置。原项目为 Python 教学仓库(见 requirements.txt),各 .ts 为对应 .py 的逐行翻译,仅供对照阅读,不保证可编译运行。",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}
