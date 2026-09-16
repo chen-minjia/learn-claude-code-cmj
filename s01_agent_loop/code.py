@@ -65,7 +65,8 @@ TOOLS = [{
 }]
 
 
-# -- Tool execution --
+# -- Tool execution
+# 这是 bash 工具需要对应执行的 函数 --
 def run_bash(command: str) -> str:
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"]
     if any(d in command for d in dangerous):
@@ -101,6 +102,7 @@ def agent_loop(messages: list):
         for block in response.content:
             if block.type == "tool_use":
                 print(f"\033[33m$ {block.input['command']}\033[0m")
+                # 这里写死了调用某个工具
                 output = run_bash(block.input["command"])
                 print(output[:200])
                 results.append({
