@@ -25,12 +25,13 @@ import os
 import subprocess
 from pathlib import Path
 
+#这四行`parse_and_bind` 就是一组针对 macOS libedit 的修复补丁，让你在`s02 >> ` 提示符下输入中文、按退格时不会出问题：
 try:
     import readline
-    readline.parse_and_bind('set bind-tty-special-chars off')
-    readline.parse_and_bind('set input-meta on')
-    readline.parse_and_bind('set output-meta on')
-    readline.parse_and_bind('set convert-meta off')
+    readline.parse_and_bind('set bind-tty-special-chars off') # 不让 readline 抢占终端特殊字符处理
+    readline.parse_and_bind('set input-meta on') # 允许输入 8-bit 字符（UTF-8 需要）
+    readline.parse_and_bind('set output-meta on') # 允许原样输出 8-bit 字符
+    readline.parse_and_bind('set convert-meta off') # 不把高位字符转成转义序列
 except ImportError:
     pass
 
@@ -45,6 +46,7 @@ WORKDIR = Path.cwd()
 client = Anthropic(base_url=os.getenv("ANTHROPIC_BASE_URL"))
 MODEL = os.environ["MODEL_ID"]
 
+# 系统提示词？
 SYSTEM = f"You are a coding agent at {WORKDIR}. Use tools to solve tasks. Act, don't explain."
 
 
@@ -161,8 +163,11 @@ def agent_loop(messages: list):
         for block in response.content:
             if block.type == "tool_use":
                 print(f"\033[33m> {block.name}\033[0m")
-                handler = TOOL_HANDLERS.get(block.name)
+                # 这里不写死了调用某个工具，而是用分发
+                handler = TOOL_HANDLERS.get(block.name) # 根据 key 找到对应的工具的执行函数
+                # `block.input` 是模型返回的工具参数；模型想写文件时，`block.name` 是`"write_file"` ，`block.input` 是：`{"path": "hello.py", "content": "print('hi')"}`
                 output = handler(**block.input) if handler else f"Unknown: {block.name}"
+                #  handler(**block.input) 等价于 run_write(path="hello.py", content="print('hi')")
                 print(str(output)[:200])
                 results.append({"type": "tool_result", "tool_use_id": block.id, "content": output})
 
