@@ -144,7 +144,7 @@ DENY_LIST = ["rm -rf /", "sudo", "shutdown", "reboot", "mkfs", "dd if=", "> /dev
 def check_deny_list(command: str) -> str | None:
     for pattern in DENY_LIST:
         if pattern in command:
-            return f"Blocked: '{pattern}' is on the deny list"
+            return f"Blocked: '{pattern}' is on the deny list 在拒绝列表"
     return None
 
 
@@ -177,9 +177,9 @@ def check_rules(tool_name: str, args: dict) -> str | None:
 
 # Gate 3: 规则命中后，暂停等用户输入。 User approval - wait for confirmation after rule match
 def ask_user(tool_name: str, args: dict, reason: str) -> str:
-    print(f"\n\033[33m[permission] {reason}\033[0m")
-    print(f"   Tool: {tool_name}({args})")
-    choice = input("   Allow? [y/N] ").strip().lower()
+    print(f"\n\033[33m[permission] {reason}\033[0m") # [permission] Potentially destructive command
+    print(f"   Tool: {tool_name}({args})") # Tool: bash({'command': 'rm /Users/bytedance/Desktop/learn-claude-code/test.txt'})
+    choice = input("   Allow? [y/N] ").strip().lower() #  终端会提示 Allow? [y/N] 并等待你输入
     return "allow" if choice in ("y", "yes") else "deny"
 
 # 三道闸门串在一起，插在工具执行之前： Pipeline: all three gates chained
