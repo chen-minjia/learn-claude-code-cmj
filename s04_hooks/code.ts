@@ -41,7 +41,10 @@ const MODEL = process.env.MODEL_ID as string;
 const SYSTEM = `You are a coding agent at ${WORKDIR}. Use tools to solve tasks. Act, don't explain.`;
 
 // A shared readline interface so hook prompts can block for input.
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 const ask = (prompt: string): Promise<string> =>
   new Promise((resolve) => rl.question(prompt, resolve));
 
@@ -78,7 +81,9 @@ function runRead(pathArg: string, limit: number | null = null): string {
     const filePath = path.resolve(WORKDIR, pathArg);
     let lines = fs.readFileSync(filePath, "utf-8").split("\n");
     if (limit && limit < lines.length) {
-      lines = lines.slice(0, limit).concat([`... (${lines.length - limit} more lines)`]);
+      lines = lines
+        .slice(0, limit)
+        .concat([`... (${lines.length - limit} more lines)`]);
     }
     return lines.join("\n");
   } catch (e: any) {
@@ -126,23 +131,63 @@ function runGlob(pattern: string): string {
 }
 
 const TOOLS: any[] = [
-  { name: "bash", description: "Run a shell command.",
-    input_schema: { type: "object", properties: { command: { type: "string" } }, required: ["command"] } },
-  { name: "read_file", description: "Read file contents.",
-    input_schema: { type: "object", properties: { path: { type: "string" }, limit: { type: "integer" } }, required: ["path"] } },
-  { name: "write_file", description: "Write content to a file.",
-    input_schema: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path", "content"] } },
-  { name: "edit_file", description: "Replace exact text in a file once.",
-    input_schema: { type: "object", properties: { path: { type: "string" }, old_text: { type: "string" }, new_text: { type: "string" } }, required: ["path", "old_text", "new_text"] } },
-  { name: "glob", description: "Find files matching a glob pattern.",
-    input_schema: { type: "object", properties: { pattern: { type: "string" } }, required: ["pattern"] } },
+  {
+    name: "bash",
+    description: "Run a shell command.",
+    input_schema: {
+      type: "object",
+      properties: { command: { type: "string" } },
+      required: ["command"],
+    },
+  },
+  {
+    name: "read_file",
+    description: "Read file contents.",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" }, limit: { type: "integer" } },
+      required: ["path"],
+    },
+  },
+  {
+    name: "write_file",
+    description: "Write content to a file.",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" }, content: { type: "string" } },
+      required: ["path", "content"],
+    },
+  },
+  {
+    name: "edit_file",
+    description: "Replace exact text in a file once.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        old_text: { type: "string" },
+        new_text: { type: "string" },
+      },
+      required: ["path", "old_text", "new_text"],
+    },
+  },
+  {
+    name: "glob",
+    description: "Find files matching a glob pattern.",
+    input_schema: {
+      type: "object",
+      properties: { pattern: { type: "string" } },
+      required: ["pattern"],
+    },
+  },
 ];
 
 const TOOL_HANDLERS: Record<string, (input: any) => string> = {
   bash: (input: any) => runBash(input.command),
   read_file: (input: any) => runRead(input.path, input.limit ?? null),
   write_file: (input: any) => runWrite(input.path, input.content),
-  edit_file: (input: any) => runEdit(input.path, input.old_text, input.new_text),
+  edit_file: (input: any) =>
+    runEdit(input.path, input.old_text, input.new_text),
   glob: (input: any) => runGlob(input.pattern),
 };
 
@@ -159,7 +204,7 @@ function registerHook(event: string, callback: (...args: any[]) => any): void {
   HOOKS[event].push(callback);
 }
 
-async function triggerHooks(event: string, ...args: any[]): Promise<any> {
+async function triggerHooks(event: string, ß: any[]): Promise<any> {
   for (const callback of HOOKS[event]) {
     const result = await callback(...args);
     if (result !== null && result !== undefined) {
@@ -185,7 +230,9 @@ async function permissionHook(block: any): Promise<string | null> {
     }
     for (const kw of DESTRUCTIVE) {
       if ((block.input.command ?? "").includes(kw)) {
-        console.log(`\n\x1b[33m[permission] Potentially destructive command\x1b[0m`);
+        console.log(
+          `\n\x1b[33m[permission] Potentially destructive command\x1b[0m`,
+        );
         console.log(`   Tool: ${block.name}(${JSON.stringify(block.input)})`);
         const choice = (await ask("   Allow? [y/N] ")).trim().toLowerCase();
         if (!["y", "yes"].includes(choice)) {
@@ -210,7 +257,10 @@ async function permissionHook(block: any): Promise<string | null> {
 
 function logHook(block: any): null {
   /** PreToolUse: log every tool call. */
-  const argsPreview = String(Object.values(block.input).slice(0, 2)).slice(0, 60);
+  const argsPreview = String(Object.values(block.input).slice(0, 2)).slice(
+    0,
+    60,
+  );
   console.log(`\x1b[90m[HOOK] ${block.name}(${argsPreview})\x1b[0m`);
   return null;
 }
@@ -218,7 +268,9 @@ function logHook(block: any): null {
 function largeOutputHook(block: any, output: any): null {
   /** PostToolUse: warn on large output. */
   if (String(output).length > 100000) {
-    console.log(`\x1b[33m[HOOK] Large output from ${block.name}: ${String(output).length} chars\x1b[0m`);
+    console.log(
+      `\x1b[33m[HOOK] Large output from ${block.name}: ${String(output).length} chars\x1b[0m`,
+    );
   }
   return null;
 }
@@ -233,14 +285,20 @@ function contextInjectHook(_query: string): null {
 function summaryHook(messages: any[]): null {
   let toolCount = 0;
   for (const m of messages) {
-    const content = Array.isArray(m.content) ? m.content : [];
-    for (const b of content) {
-      if (b && typeof b === "object" && b.type === "tool_result") {
+    const contentList = Array.isArray(m.content) ? m.content : [];
+    for (const content of contentList) {
+      if (
+        content &&
+        typeof content === "object" &&
+        content.type === "tool_result"
+      ) {
         toolCount += 1;
       }
     }
   }
-  console.log(`\x1b[90m[HOOK] Stop: session used ${toolCount} tool calls\x1b[0m`);
+  console.log(
+    `\x1b[90m[HOOK] Stop: session used ${toolCount} tool calls\x1b[0m`,
+  );
   return null;
 }
 
@@ -266,6 +324,7 @@ async function agentLoop(messages: any[]): Promise<void> {
     messages.push({ role: "assistant", content: response.content });
 
     if (response.stop_reason !== "tool_use") {
+      // Stop：循环结束前，执行一系列注册的函数
       const force = await triggerHooks("Stop", messages);
       if (force) {
         messages.push({ role: "user", content: force });
@@ -281,18 +340,27 @@ async function agentLoop(messages: any[]): Promise<void> {
       }
 
       // s04 change: hook replaces hard-coded check_permission()
+      // PreToolUse：工具调用前，执行一系列注册的函数
       const blocked = await triggerHooks("PreToolUse", block);
       if (blocked) {
-        results.push({ type: "tool_result", tool_use_id: block.id, content: String(blocked) });
+        results.push({
+          type: "tool_result",
+          tool_use_id: block.id,
+          content: String(blocked),
+        });
         continue;
       }
 
       const handler = TOOL_HANDLERS[block.name];
       const output = handler ? handler(block.input) : `Unknown: ${block.name}`;
-
+      // PostToolUse：工具调用后，执行一系列注册的函数
       await triggerHooks("PostToolUse", block, output); // s04: post hook
 
-      results.push({ type: "tool_result", tool_use_id: block.id, content: output });
+      results.push({
+        type: "tool_result",
+        tool_use_id: block.id,
+        content: output,
+      });
     }
 
     messages.push({ role: "user", content: results });
@@ -314,8 +382,10 @@ async function main(): Promise<void> {
     if (["q", "exit", ""].includes(query.trim().toLowerCase())) {
       break;
     }
+    // UserPromptSubmit：用户输入前，执行一系列注册的函数
     await triggerHooks("UserPromptSubmit", query);
     history.push({ role: "user", content: query });
+    // agentLoop：执行主循环，调用LLM，处理工具调用，执行工具，处理工具输出，更新历史记录
     await agentLoop(history);
     for (const block of history[history.length - 1]["content"]) {
       if (block?.type === "text") {

@@ -125,35 +125,42 @@ HOOKS = {"UserPromptSubmit": [], "PreToolUse": [], "PostToolUse": [], "Stop": []
 def register_hook(event: str, callback):
     HOOKS[event].append(callback)
 
-def trigger_hooks(event: str, *args):
+def trigger_hooks(event: str, *args): # *args —— 收集"位置参数"，打包成 元组 (tuple)；元组是一种有序、不可变、允许重复的序列，用圆括号 () 表示：t = (1, 2, 2, "a")；t[0] 支持索引；t + (3, 4) 可以拼接（生成新元组）；t[0] = 9  报错，不可变
+ # Py *args 等价于 js ...args
     for callback in HOOKS[event]:
-        result = callback(*args)
+        result = callback(*args) # 把元组解包 ，等价于`callback(block)` 或`callback(block, output)` ...
         if result is not None:  # A hook result blocks this tool call.
             return result
     return None
 
+# **args 收集"关键字参数"，打包成 字典 (dict);调用时以`key=value` 形式传入的多余实参，会被打包成字典。
+# *args f(a, 2)
+# **args f(a=1, b=2)
 
 # s03 permission check logic, now wrapped as a hook
 DENY_LIST = ["rm -rf /", "sudo", "shutdown", "reboot", "mkfs", "dd if="]
 DESTRUCTIVE = ["rm ", "> /etc/", "chmod 777"]
 
+#  hook1：权限校验
 def permission_hook(block):
-    """PreToolUse: s03 check_permission() logic moved here."""
+    """
+    PreToolUse: s03 check_permission() logic moved here.
+    """
     if block.name == "bash":
-        for pattern in DENY_LIST:
+        for pattern in DENY_LIST: # 硬拒绝
             if pattern in block.input.get("command", ""):
                 print(f"\n\033[31m[blocked] '{pattern}'\033[0m")
                 return "Permission denied by deny list"
-        for kw in DESTRUCTIVE:
+        for kw in DESTRUCTIVE: # 规则匹配 → 用户审批
             if kw in block.input.get("command", ""):
                 print(f"\n\033[33m[permission] Potentially destructive command\033[0m")
                 print(f"   Tool: {block.name}({block.input})")
                 choice = input("   Allow? [y/N] ").strip().lower()
                 if choice not in ("y", "yes"):
                     return "Permission denied by user"
-    if block.name in ("read_file", "write_file", "edit_file"):
+    if block.name in ("read_file", "write_file", "edit_file"): 
         path = block.input.get("path", "")
-        if not (WORKDIR / path).resolve().is_relative_to(WORKDIR):
+        if not (WORKDIR / path).resolve().is_relative_to(WORKDIR): # 规则匹配 → 用户审批
             print(f"\n\033[33m[permission] Access outside workspace\033[0m")
             print(f"   Tool: {block.name}({block.input})")
             choice = input("   Allow? [y/N] ").strip().lower()
@@ -161,12 +168,14 @@ def permission_hook(block):
                 return "Permission denied by user"
     return None
 
+# hook2：log日志记录
 def log_hook(block):
     """PreToolUse: log every tool call."""
     args_preview = str(list(block.input.values())[:2])[:60]
     print(f"\033[90m[HOOK] {block.name}({args_preview})\033[0m")
     return None
 
+# hook3：警告大输出
 def large_output_hook(block, output):
     """PostToolUse: warn on large output."""
     if len(str(output)) > 100000:
@@ -174,11 +183,13 @@ def large_output_hook(block, output):
     return None
 
 # UserPromptSubmit hook: log user input before it reaches the LLM
+# UserPromptSubmit hook4：上下文注入
 def context_inject_hook(query: str):
     print(f"\033[90m[HOOK] UserPromptSubmit: working in {WORKDIR}\033[0m")
     return None
 
 # Stop hook: print summary when loop is about to exit
+# Stop hook5：统计工具调用次数
 def summary_hook(messages: list):
     tool_count = sum(1 for m in messages
                      for b in (m.get("content") if isinstance(m.get("content"), list) else [])
@@ -186,11 +197,12 @@ def summary_hook(messages: list):
     print(f"\033[90m[HOOK] Stop: session used {tool_count} tool calls\033[0m")
     return None
 
-register_hook("UserPromptSubmit", context_inject_hook)
-register_hook("PreToolUse", permission_hook)
-register_hook("PreToolUse", log_hook)
-register_hook("PostToolUse", large_output_hook)
-register_hook("Stop", summary_hook)
+# 注册hooks：把对应的函数绑定到需要执行该函数的事件（生命周期）上
+register_hook("UserPromptSubmit", context_inject_hook) # 用户输入前，上下文注入工作目录
+register_hook("PreToolUse", permission_hook) # 工具调用前，权限校验
+register_hook("PreToolUse", log_hook) # 工具调用前，log日志记录
+register_hook("PostToolUse", large_output_hook) # 工具调用后，警告大输出
+register_hook("Stop", summary_hook) # 循环结束前，统计工具调用次数
 
 
 # -- Agent loop: same structure as s03, but no hard-coded check --
@@ -206,6 +218,7 @@ def agent_loop(messages: list):
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason != "tool_use":
+            # Stop：循环结束前，执行一些列循环结束前注册是函数
             force = trigger_hooks("Stop", messages)
             if force:
                 messages.append({"role": "user", "content": force})
@@ -218,6 +231,7 @@ def agent_loop(messages: list):
                 continue
 
             # s04 change: hook replaces hard-coded check_permission()
+            # PreToolUse：工具调用前，执行一系列注册的函数
             blocked = trigger_hooks("PreToolUse", block)
             if blocked:
                 results.append({"type": "tool_result", "tool_use_id": block.id,
@@ -227,6 +241,7 @@ def agent_loop(messages: list):
             handler = TOOL_HANDLERS.get(block.name)
             output = handler(**block.input) if handler else f"Unknown: {block.name}"
 
+            # PostToolUse：工具调用后，执行一系列注册的函数
             trigger_hooks("PostToolUse", block, output)  # s04: post hook
 
             results.append({"type": "tool_result", "tool_use_id": block.id, "content": output})
@@ -246,6 +261,7 @@ if __name__ == "__main__":
             break
         if query.strip().lower() in ("q", "exit", ""):
             break
+        # UserPromptSubmit：用户输入前，上下文注入工作目录
         trigger_hooks("UserPromptSubmit", query)
         history.append({"role": "user", "content": query})
         agent_loop(history)
