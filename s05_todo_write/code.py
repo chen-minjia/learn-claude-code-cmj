@@ -48,6 +48,7 @@ MODEL = os.environ["MODEL_ID"]
 # s05 change: SYSTEM prompt adds planning guidance
 SYSTEM = (
     f"You are a coding agent at {WORKDIR}. "
+    # 一般都会在系统提示词里写需要调用 todo_write 工具!!!
     "Before starting any multi-step task, use todo_write to plan your steps. "
     "Update status as you go."
 )
@@ -112,12 +113,13 @@ class TodoManager:
         self.items: list[dict] = []
 
     def update(self, todos: list | str) -> str:
+        # 模型有时会把`todos` 传成真正的数组，有时会传成一个 字符串形式的数组 （比如`'[{"content": "x", "status": "pending"}]'` ）。这段做了双重兜底：
         if isinstance(todos, str):
             try:
-                todos = json.loads(todos)
-            except json.JSONDecodeError:
+                todos = json.loads(todos) # 先按标准 JSON 解析
+            except json.JSONDecodeError: # 相当于 catch
                 try:
-                    todos = ast.literal_eval(todos)
+                    todos = ast.literal_eval(todos) # 相当于 array.isArray
                 except (SyntaxError, ValueError) as e:
                     raise ValueError("todos must be a list or JSON array string") from e
 
@@ -126,8 +128,9 @@ class TodoManager:
         if len(todos) > 20:
             raise ValueError("Max 20 todos allowed")
 
-        validated = []
+        validated = []  # 一份经过合法性校验、清洗后的"干净" todo 列表 ,
         in_progress_count = 0
+        # 遍历 todos 列表，逐项校验并清洗
         for index, todo in enumerate(todos):
             if not isinstance(todo, dict):
                 raise ValueError(f"todos[{index}] must be an object")
@@ -136,6 +139,7 @@ class TodoManager:
             status = str(todo.get("status", "pending")).lower()
             if not content:
                 raise ValueError(f"todos[{index}] requires content")
+            # 只能是 pending, in_progress, completed 三种合规状态
             if status not in ("pending", "in_progress", "completed"):
                 raise ValueError(f"todos[{index}] has invalid status '{status}'")
             if status == "in_progress":
@@ -143,17 +147,22 @@ class TodoManager:
             validated.append({"content": content, "status": status})
 
         if in_progress_count > 1:
+            # 为什么限制一次只能有一个 todo 在 in_progress 状态？
             raise ValueError("Only one todo can be in_progress at a time")
 
         self.items = validated
         return self.render()
 
+    # `render()` 的返回值有两个去向，都是给"人"和"模型"看的
+    #  1）update() 末尾 `return self.render()` ——每次更新完把最新清单返回；
+    #  2）run_todo_write 拿到后，一边 `print` 打到终端给你看（那个黄色 `## Current Tasks`），一边作为 `tool_result` 回传给模型，让模型"看到"自己当前的任务进度。
     def render(self) -> str:
         if not self.items:
             return "No todos."
 
         lines = []
         for todo in self.items:
+            # 逐项转成带标记的行
             marker = {
                 "pending": "[ ]",
                 "in_progress": "[>]",
@@ -161,6 +170,7 @@ class TodoManager:
             }[todo["status"]]
             lines.append(f"{marker} {todo['content']}")
 
+        # 追加完成度统计
         done = sum(todo["status"] == "completed" for todo in self.items)
         lines.append(f"\n({done}/{len(self.items)} completed)")
         return "\n".join(lines)
@@ -168,7 +178,14 @@ class TodoManager:
 
 TODO = TodoManager()
 
+# 何时触发 update
+# 1. 模型主动决定调用 todo_write 工具
+    # └─> agent_loop 里 handler(**block.input)   (L308)
+        #  └─> run_todo_write(todos)             (L172)
+            #    └─> TODO.update(todos)          (L174)  ← 就是这个函数
 
+# 2. 连续3次不调用，添加<reminder>追加到 result 文本里提示调用
+                
 def run_todo_write(todos: list | str) -> str:
     try:
         output = TODO.update(todos)
@@ -316,10 +333,14 @@ def agent_loop(messages: list):
 
             results.append({"type": "tool_result", "tool_use_id": block.id,
                             "content": str(output)})
-
+        # rounds_since_todo:连续多少轮没调用过`todo_write`
         rounds_since_todo = 0 if used_todo else rounds_since_todo + 1
+        # roundsSinceTodo = usedTodo ? 0 : roundsSinceTodo + 1;
         if rounds_since_todo >= 3:
             results.append({"type": "text",
+                            # 只是在 result 文本里追加了这一段<reminder>；提醒引发的后果：靠模型自己决定
+                            # 模型读到这句提醒， 通常 会主动再调一次`todo_write` 工具，传入一份新的完整 todos 列表，比如把已经做完的那项从`in_progress` 改成`completed` 、把下一项设成`in_progress` 。
+                            # 然后 run_todo_write → TodoManager.update 才真正发生状态更新。
                             "text": "<reminder>Update your todos.</reminder>"})
             rounds_since_todo = 0
 

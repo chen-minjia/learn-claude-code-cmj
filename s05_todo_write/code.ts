@@ -43,11 +43,15 @@ const MODEL = process.env.MODEL_ID as string;
 // s05 change: SYSTEM prompt adds planning guidance
 const SYSTEM =
   `You are a coding agent at ${WORKDIR}. ` +
+  // 一般都会在系统提示词里写需要调用 todo_write 工具!!!
   "Before starting any multi-step task, use todo_write to plan your steps. " +
   "Update status as you go.";
 
 // A shared readline interface so hook prompts can block for input.
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 const ask = (prompt: string): Promise<string> =>
   new Promise((resolve) => rl.question(prompt, resolve));
 
@@ -81,9 +85,13 @@ function runBash(command: string): string {
 
 function runRead(pathArg: string, limit: number | null = null): string {
   try {
-    let lines = fs.readFileSync(path.resolve(WORKDIR, pathArg), "utf-8").split("\n");
+    let lines = fs
+      .readFileSync(path.resolve(WORKDIR, pathArg), "utf-8")
+      .split("\n");
     if (limit && limit < lines.length) {
-      lines = lines.slice(0, limit).concat([`... (${lines.length - limit} more lines)`]);
+      lines = lines
+        .slice(0, limit)
+        .concat([`... (${lines.length - limit} more lines)`]);
     }
     return lines.join("\n");
   } catch (e: any) {
@@ -157,8 +165,9 @@ class TodoManager {
       throw new Error("Max 20 todos allowed");
     }
 
-    const validated: TodoItem[] = [];
+    const validated: TodoItem[] = []; // 一份经过合法性校验、清洗后的"干净" todo 列表 ,
     let inProgressCount = 0;
+    // 遍历 todos 列表，逐项校验并清洗
     todos.forEach((todo: any, index: number) => {
       if (typeof todo !== "object" || todo === null || Array.isArray(todo)) {
         throw new Error(`todos[${index}] must be an object`);
@@ -169,6 +178,7 @@ class TodoManager {
       if (!content) {
         throw new Error(`todos[${index}] requires content`);
       }
+      // 只能是 pending, in_progress, completed 三种合规状态
       if (!["pending", "in_progress", "completed"].includes(status)) {
         throw new Error(`todos[${index}] has invalid status '${status}'`);
       }
@@ -179,6 +189,7 @@ class TodoManager {
     });
 
     if (inProgressCount > 1) {
+      // 为什么限制一次只能有一个 todo 在 in_progress 状态？
       throw new Error("Only one todo can be in_progress at a time");
     }
 
@@ -186,6 +197,9 @@ class TodoManager {
     return this.render();
   }
 
+  // `render()` 的返回值有两个去向，都是给"人"和"模型"看的
+  //  1）update() 末尾`return this.render()` ——每次更新完把最新清单返回；
+  //  2）runTodoWrite 拿到后，一边`console.log` 打到终端给你看（那个黄色`## Current Tasks` ），一边作为`tool_result` 回传给模型，让模型"看到"自己当前的任务进度。
   render(): string {
     if (!this.items.length) {
       return "No todos.";
@@ -193,15 +207,21 @@ class TodoManager {
 
     const lines: string[] = [];
     for (const todo of this.items) {
-      const marker = ({
-        pending: "[ ]",
-        in_progress: "[>]",
-        completed: "[x]",
-      } as Record<string, string>)[todo.status];
+      // 逐项转成带标记的行
+      const marker = (
+        {
+          pending: "[ ]",
+          in_progress: "[>]",
+          completed: "[x]",
+        } as Record<string, string>
+      )[todo.status];
       lines.push(`${marker} ${todo.content}`);
     }
 
-    const done = this.items.filter((todo) => todo.status === "completed").length;
+    // 追加完成度统计
+    const done = this.items.filter(
+      (todo) => todo.status === "completed",
+    ).length;
     lines.push(`\n(${done}/${this.items.length} completed)`);
     return lines.join("\n");
   }
@@ -221,26 +241,90 @@ function runTodoWrite(todos: TodoItem[] | string): string {
 }
 
 const TOOLS: any[] = [
-  { name: "bash", description: "Run a shell command.",
-    input_schema: { type: "object", properties: { command: { type: "string" } }, required: ["command"] } },
-  { name: "read_file", description: "Read file contents.",
-    input_schema: { type: "object", properties: { path: { type: "string" }, limit: { type: "integer" } }, required: ["path"] } },
-  { name: "write_file", description: "Write content to a file.",
-    input_schema: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path", "content"] } },
-  { name: "edit_file", description: "Replace exact text in a file once.",
-    input_schema: { type: "object", properties: { path: { type: "string" }, old_text: { type: "string" }, new_text: { type: "string" } }, required: ["path", "old_text", "new_text"] } },
-  { name: "glob", description: "Find files matching a glob pattern.",
-    input_schema: { type: "object", properties: { pattern: { type: "string" } }, required: ["pattern"] } },
+  {
+    name: "bash",
+    description: "Run a shell command.",
+    input_schema: {
+      type: "object",
+      properties: { command: { type: "string" } },
+      required: ["command"],
+    },
+  },
+  {
+    name: "read_file",
+    description: "Read file contents.",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" }, limit: { type: "integer" } },
+      required: ["path"],
+    },
+  },
+  {
+    name: "write_file",
+    description: "Write content to a file.",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" }, content: { type: "string" } },
+      required: ["path", "content"],
+    },
+  },
+  {
+    name: "edit_file",
+    description: "Replace exact text in a file once.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        old_text: { type: "string" },
+        new_text: { type: "string" },
+      },
+      required: ["path", "old_text", "new_text"],
+    },
+  },
+  {
+    name: "glob",
+    description: "Find files matching a glob pattern.",
+    input_schema: {
+      type: "object",
+      properties: { pattern: { type: "string" } },
+      required: ["pattern"],
+    },
+  },
   // s05: new tool
-  { name: "todo_write", description: "Create and manage a task list for your current coding session.",
-    input_schema: { type: "object", properties: { todos: { type: "array", maxItems: 20, items: { type: "object", properties: { content: { type: "string", minLength: 1 }, status: { type: "string", enum: ["pending", "in_progress", "completed"] } }, required: ["content", "status"] } } }, required: ["todos"] } },
+  {
+    name: "todo_write",
+    description:
+      "Create and manage a task list for your current coding session.",
+    input_schema: {
+      type: "object",
+      properties: {
+        todos: {
+          type: "array",
+          maxItems: 20,
+          items: {
+            type: "object",
+            properties: {
+              content: { type: "string", minLength: 1 },
+              status: {
+                type: "string",
+                enum: ["pending", "in_progress", "completed"],
+              },
+            },
+            required: ["content", "status"],
+          },
+        },
+      },
+      required: ["todos"],
+    },
+  },
 ];
 
 const TOOL_HANDLERS: Record<string, (input: any) => string> = {
   bash: (input: any) => runBash(input.command),
   read_file: (input: any) => runRead(input.path, input.limit ?? null),
   write_file: (input: any) => runWrite(input.path, input.content),
-  edit_file: (input: any) => runEdit(input.path, input.old_text, input.new_text),
+  edit_file: (input: any) =>
+    runEdit(input.path, input.old_text, input.new_text),
   glob: (input: any) => runGlob(input.pattern),
   todo_write: (input: any) => runTodoWrite(input.todos),
 };
@@ -283,7 +367,9 @@ async function permissionHook(block: any): Promise<string | null> {
     }
     for (const keyword of DESTRUCTIVE) {
       if (command.includes(keyword)) {
-        console.log(`\n\x1b[33m[permission] Potentially destructive command\x1b[0m`);
+        console.log(
+          `\n\x1b[33m[permission] Potentially destructive command\x1b[0m`,
+        );
         console.log(`   Tool: ${block.name}(${JSON.stringify(block.input)})`);
         const choice = (await ask("   Allow? [y/N] ")).trim().toLowerCase();
         if (!["y", "yes"].includes(choice)) {
@@ -308,7 +394,10 @@ async function permissionHook(block: any): Promise<string | null> {
 
 function logHook(block: any): null {
   /** PreToolUse: log every tool call. */
-  const argsPreview = String(Object.values(block.input).slice(0, 2)).slice(0, 60);
+  const argsPreview = String(Object.values(block.input).slice(0, 2)).slice(
+    0,
+    60,
+  );
   console.log(`\x1b[90m[HOOK] ${block.name}(${argsPreview})\x1b[0m`);
   return null;
 }
@@ -316,7 +405,9 @@ function logHook(block: any): null {
 function largeOutputHook(block: any, output: any): null {
   /** PostToolUse: warn on large output. */
   if (String(output).length > 100000) {
-    console.log(`\x1b[33m[HOOK] Large output from ${block.name}: ${String(output).length} chars\x1b[0m`);
+    console.log(
+      `\x1b[33m[HOOK] Large output from ${block.name}: ${String(output).length} chars\x1b[0m`,
+    );
   }
   return null;
 }
@@ -338,7 +429,9 @@ function summaryHook(messages: any[]): null {
       }
     }
   }
-  console.log(`\x1b[90m[HOOK] Stop: session used ${toolCount} tool calls\x1b[0m`);
+  console.log(
+    `\x1b[90m[HOOK] Stop: session used ${toolCount} tool calls\x1b[0m`,
+  );
   return null;
 }
 
@@ -380,7 +473,11 @@ async function agentLoop(messages: any[]): Promise<void> {
 
       const blocked = await triggerHooks("PreToolUse", block);
       if (blocked) {
-        results.push({ type: "tool_result", tool_use_id: block.id, content: String(blocked) });
+        results.push({
+          type: "tool_result",
+          tool_use_id: block.id,
+          content: String(blocked),
+        });
         continue;
       }
 
@@ -398,12 +495,19 @@ async function agentLoop(messages: any[]): Promise<void> {
         usedTodo = true;
       }
 
-      results.push({ type: "tool_result", tool_use_id: block.id, content: String(output) });
+      results.push({
+        type: "tool_result",
+        tool_use_id: block.id,
+        content: String(output),
+      });
     }
 
     roundsSinceTodo = usedTodo ? 0 : roundsSinceTodo + 1;
     if (roundsSinceTodo >= 3) {
-      results.push({ type: "text", text: "<reminder>Update your todos.</reminder>" });
+      results.push({
+        type: "text",
+        text: "<reminder>Update your todos.</reminder>",
+      });
       roundsSinceTodo = 0;
     }
 
