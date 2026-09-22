@@ -44,7 +44,10 @@ const SUB_SYSTEM =
   "Complete the given task, then return a concise final answer.";
 
 // A shared readline interface so hook prompts can block for input.
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 const ask = (prompt: string): Promise<string> =>
   new Promise((resolve) => rl.question(prompt, resolve));
 
@@ -78,9 +81,13 @@ function runBash(command: string): string {
 
 function runRead(pathArg: string, limit: number | null = null): string {
   try {
-    let lines = fs.readFileSync(path.resolve(WORKDIR, pathArg), "utf-8").split("\n");
+    let lines = fs
+      .readFileSync(path.resolve(WORKDIR, pathArg), "utf-8")
+      .split("\n");
     if (limit && limit < lines.length) {
-      lines = lines.slice(0, limit).concat([`... (${lines.length - limit} more lines)`]);
+      lines = lines
+        .slice(0, limit)
+        .concat([`... (${lines.length - limit} more lines)`]);
     }
     return lines.join("\n");
   } catch (e: any) {
@@ -128,23 +135,63 @@ function runGlob(pattern: string): string {
 }
 
 const BASE_TOOLS: any[] = [
-  { name: "bash", description: "Run a shell command.",
-    input_schema: { type: "object", properties: { command: { type: "string" } }, required: ["command"] } },
-  { name: "read_file", description: "Read file contents.",
-    input_schema: { type: "object", properties: { path: { type: "string" }, limit: { type: "integer" } }, required: ["path"] } },
-  { name: "write_file", description: "Write content to a file.",
-    input_schema: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path", "content"] } },
-  { name: "edit_file", description: "Replace exact text in a file once.",
-    input_schema: { type: "object", properties: { path: { type: "string" }, old_text: { type: "string" }, new_text: { type: "string" } }, required: ["path", "old_text", "new_text"] } },
-  { name: "glob", description: "Find files matching a glob pattern.",
-    input_schema: { type: "object", properties: { pattern: { type: "string" } }, required: ["pattern"] } },
+  {
+    name: "bash",
+    description: "Run a shell command.",
+    input_schema: {
+      type: "object",
+      properties: { command: { type: "string" } },
+      required: ["command"],
+    },
+  },
+  {
+    name: "read_file",
+    description: "Read file contents.",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" }, limit: { type: "integer" } },
+      required: ["path"],
+    },
+  },
+  {
+    name: "write_file",
+    description: "Write content to a file.",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" }, content: { type: "string" } },
+      required: ["path", "content"],
+    },
+  },
+  {
+    name: "edit_file",
+    description: "Replace exact text in a file once.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        old_text: { type: "string" },
+        new_text: { type: "string" },
+      },
+      required: ["path", "old_text", "new_text"],
+    },
+  },
+  {
+    name: "glob",
+    description: "Find files matching a glob pattern.",
+    input_schema: {
+      type: "object",
+      properties: { pattern: { type: "string" } },
+      required: ["pattern"],
+    },
+  },
 ];
 
 const BASE_HANDLERS: Record<string, (input: any) => string> = {
   bash: (input: any) => runBash(input.command),
   read_file: (input: any) => runRead(input.path, input.limit ?? null),
   write_file: (input: any) => runWrite(input.path, input.content),
-  edit_file: (input: any) => runEdit(input.path, input.old_text, input.new_text),
+  edit_file: (input: any) =>
+    runEdit(input.path, input.old_text, input.new_text),
   glob: (input: any) => runGlob(input.pattern),
 };
 
@@ -186,7 +233,9 @@ async function permissionHook(block: any): Promise<string | null> {
     }
     for (const keyword of DESTRUCTIVE) {
       if (command.includes(keyword)) {
-        console.log("\n\x1b[33m[permission] Potentially destructive command\x1b[0m");
+        console.log(
+          "\n\x1b[33m[permission] Potentially destructive command\x1b[0m",
+        );
         console.log(`   Tool: ${block.name}(${JSON.stringify(block.input)})`);
         const choice = (await ask("   Allow? [y/N] ")).trim().toLowerCase();
         if (!["y", "yes"].includes(choice)) {
@@ -212,7 +261,10 @@ async function permissionHook(block: any): Promise<string | null> {
 
 function logHook(block: any): null {
   /** PreToolUse: log every tool call. */
-  const argsPreview = String(Object.values(block.input).slice(0, 2)).slice(0, 60);
+  const argsPreview = String(Object.values(block.input).slice(0, 2)).slice(
+    0,
+    60,
+  );
   console.log(`\x1b[90m[HOOK] ${block.name}(${argsPreview})\x1b[0m`);
   return null;
 }
@@ -220,7 +272,9 @@ function logHook(block: any): null {
 function largeOutputHook(block: any, output: any): null {
   /** PostToolUse: warn on large output. */
   if (String(output).length > 100000) {
-    console.log(`\x1b[33m[HOOK] Large output from ${block.name}: ${String(output).length} chars\x1b[0m`);
+    console.log(
+      `\x1b[33m[HOOK] Large output from ${block.name}: ${String(output).length} chars\x1b[0m`,
+    );
   }
   return null;
 }
@@ -242,7 +296,9 @@ function summaryHook(messages: any[]): null {
       }
     }
   }
-  console.log(`\x1b[90m[HOOK] Stop: session used ${toolCount} tool calls\x1b[0m`);
+  console.log(
+    `\x1b[90m[HOOK] Stop: session used ${toolCount} tool calls\x1b[0m`,
+  );
   return null;
 }
 
@@ -252,7 +308,10 @@ registerHook("PreToolUse", logHook);
 registerHook("PostToolUse", largeOutputHook);
 registerHook("Stop", summaryHook);
 
-async function executeTool(block: any, handlers: Record<string, (input: any) => string>): Promise<string> {
+async function executeTool(
+  block: any,
+  handlers: Record<string, (input: any) => string>,
+): Promise<string> {
   const blocked = await triggerHooks("PreToolUse", block);
   if (blocked) {
     return String(blocked);
@@ -270,10 +329,10 @@ async function executeTool(block: any, handlers: Record<string, (input: any) => 
   return String(output);
 }
 
-// -- New in s06: a nested agent loop with fresh messages --
+// -- New in s06: a nested agent loop with fresh messages 带有全新消息的嵌套 agent loop--
 
-const SUB_TOOLS = [...BASE_TOOLS];
-const SUB_HANDLERS = { ...BASE_HANDLERS };
+const SUB_TOOLS = [...BASE_TOOLS]; // 先继承父工具
+const SUB_HANDLERS = { ...BASE_HANDLERS }; // 先继承父工具派发
 
 function extractText(content: any): string {
   if (!Array.isArray(content)) {
@@ -286,15 +345,17 @@ function extractText(content: any): string {
 }
 
 async function runSubagent(prompt: string): Promise<string> {
+  // 这个工具执行需要传进来一个 prompt，demo：[HOOK] task(['Investigate the project at /Users/bytedance/Desktop/learn-)
   console.log("\n\x1b[35m[Subagent started]\x1b[0m");
   const messages: any[] = [{ role: "user", content: prompt }];
 
   for (let i = 0; i < 30; i++) {
+    // 主agent 是 while true 循环，子agent 是上限 30 轮
     const response = await client.messages.create({
       model: MODEL,
-      system: SUB_SYSTEM,
+      system: SUB_SYSTEM, // 子 agent 就用他自己的系统提示词
       messages,
-      tools: SUB_TOOLS,
+      tools: SUB_TOOLS, // 一般会继承父tools，但是不会把派发工具给子agent，以防子agent再派发子子agent，子子孙孙无穷尽也
       max_tokens: 8000,
     });
     messages.push({ role: "assistant", content: response.content });
@@ -315,7 +376,9 @@ async function runSubagent(prompt: string): Promise<string> {
         continue;
       }
       const output = await executeTool(block, SUB_HANDLERS);
-      console.log(`  \x1b[90m[sub] ${block.name}: ${output.slice(0, 100)}\x1b[0m`);
+      console.log(
+        `  \x1b[90m[sub] ${block.name}: ${output.slice(0, 100)}\x1b[0m`,
+      );
       results.push({
         type: "tool_result",
         tool_use_id: block.id,
@@ -326,12 +389,15 @@ async function runSubagent(prompt: string): Promise<string> {
   }
 
   console.log("\x1b[35m[Subagent stopped]\x1b[0m");
-  return "Subagent stopped after 30 turns without a final answer.";
+  //  子agent 超过 30 轮，没有返回最终答案，就停止
+  return "栓扣，子 agent 30 轮没有返回最终答案，蒜鸟";
 }
 
 const TASK_TOOL = {
   name: "task",
-  description: "Run a subagent with fresh conversation context and return its final text.",
+  description:
+    // 派发子agent 的工具描述：启动子 agent，使用全新对话上下文，并返回其最终文本
+    "Run a subagent with fresh conversation context and return its final text.",
   input_schema: {
     type: "object",
     properties: { prompt: { type: "string", minLength: 1 } },
@@ -340,10 +406,12 @@ const TASK_TOOL = {
 };
 
 const TOOLS = [...BASE_TOOLS, TASK_TOOL];
-const TOOL_HANDLERS: Record<string, (input: any) => string | Promise<string>> = {
-  ...BASE_HANDLERS,
-  task: (input: any) => runSubagent(input.prompt),
-};
+const TOOL_HANDLERS: Record<string, (input: any) => string | Promise<string>> =
+  {
+    ...BASE_HANDLERS,
+    // 派发子agent 的Tool对应的具体工具执行
+    task: (input: any) => runSubagent(input.prompt), // 传入必要的上下文
+  };
 
 // -- Parent agent loop --
 
@@ -353,7 +421,7 @@ async function agentLoop(messages: any[]): Promise<void> {
       model: MODEL,
       system: SYSTEM,
       messages,
-      tools: TOOLS,
+      tools: TOOLS, // 主 AGENT 多了个派发任务的 tool
       max_tokens: 8000,
     });
     messages.push({ role: "assistant", content: response.content });
@@ -372,15 +440,17 @@ async function agentLoop(messages: any[]): Promise<void> {
       if (block.type !== "tool_use") {
         continue;
       }
-      // Parent dispatch: the "task" handler runs a full nested loop.
-      const blocked = await triggerHooks("PreToolUse", block);
+      // Parent dispatch: the "task" handler runs a full nested loop. 父级调度：task 处理器执行完整嵌套循环。
+      const blocked = await triggerHooks("PreToolUse", block); // PreToolUse 钩子的返回值 ——它代表"这次工具调用有没有被某个钩子拦下来"。
       let output: string;
       if (blocked) {
         output = String(blocked);
       } else {
         const handler = TOOL_HANDLERS[block.name];
         try {
-          output = handler ? String(await handler(block.input)) : `Unknown: ${block.name}`;
+          output = handler
+            ? String(await handler(block.input)) // 模型在执行的时候，会看到每个工具需要的入参，然后会把需要的参数填进去
+            : `Unknown: ${block.name}`;
         } catch (e: any) {
           output = `Error: ${e}`;
         }

@@ -224,12 +224,13 @@ register_hook("Stop", summary_hook)
 
 
 def execute_tool(block, handlers: dict) -> str:
-    blocked = trigger_hooks("PreToolUse", block)
+    blocked = trigger_hooks("PreToolUse", block)  # PreToolUse 钩子的返回值 —— 它代表"这次工具调用有没有被某个钩子拦下来"。
     if blocked:
         return str(blocked)
 
     handler = handlers.get(block.name)
     try:
+        # 模型在执行的时候，会看到每个工具需要的入参，然后会把需要的参数填进去
         output = handler(**block.input) if handler else f"Unknown: {block.name}"
     except Exception as e:
         output = f"Error: {e}"
@@ -238,10 +239,10 @@ def execute_tool(block, handlers: dict) -> str:
     return str(output)
 
 
-# -- New in s06: a nested agent loop with fresh messages --
+# -- New in s06: a nested agent loop with fresh messages 带有全新消息的嵌套 agent loop --
 
-SUB_TOOLS = list(BASE_TOOLS)
-SUB_HANDLERS = dict(BASE_HANDLERS)
+SUB_TOOLS = list(BASE_TOOLS)  # 先继承父工具
+SUB_HANDLERS = dict(BASE_HANDLERS)  # 先继承父工具派发
 
 
 def extract_text(content) -> str:
@@ -258,12 +259,12 @@ def run_subagent(prompt: str) -> str:
     print("\n\033[35m[Subagent started]\033[0m")
     messages = [{"role": "user", "content": prompt}]
 
-    for _ in range(30):
+    for _ in range(30):  # 主 agent 是 while True 循环，子 agent 是上限 30 轮
         response = client.messages.create(
             model=MODEL,
-            system=SUB_SYSTEM,
+            system=SUB_SYSTEM,  # 子 agent 就用他自己的系统提示词
             messages=messages,
-            tools=SUB_TOOLS,
+            tools=SUB_TOOLS,  # 一般会继承父 tools，但是不会把派发工具给子 agent，以防子 agent 再派发子子 agent，子子孙孙无穷尽也
             max_tokens=8000,
         )
         messages.append({"role": "assistant", "content": response.content})
@@ -290,11 +291,13 @@ def run_subagent(prompt: str) -> str:
         messages.append({"role": "user", "content": results})
 
     print("\033[35m[Subagent stopped]\033[0m")
+    # 子 agent 超过 30 轮，没有返回最终答案，就停止
     return "Subagent stopped after 30 turns without a final answer."
 
 
 TASK_TOOL = {
     "name": "task",
+    # 派发子 agent 的工具描述：启动子 agent，使用全新对话上下文，并返回其最终文本
     "description": "Run a subagent with fresh conversation context and return its final text.",
     "input_schema": {
         "type": "object",
@@ -304,6 +307,7 @@ TASK_TOOL = {
 }
 
 TOOLS = [*BASE_TOOLS, TASK_TOOL]
+# 派发子 agent 的 Tool 对应的具体工具执行；task 传入必要的上下文
 TOOL_HANDLERS = {**BASE_HANDLERS, "task": run_subagent}
 
 
@@ -315,7 +319,7 @@ def agent_loop(messages: list):
             model=MODEL,
             system=SYSTEM,
             messages=messages,
-            tools=TOOLS,
+            tools=TOOLS,  # 主 agent 多了个派发任务的 tool
             max_tokens=8000,
         )
         messages.append({"role": "assistant", "content": response.content})
@@ -331,6 +335,7 @@ def agent_loop(messages: list):
         for block in response.content:
             if block.type != "tool_use":
                 continue
+            # 父级调度：task 处理器执行完整嵌套循环。
             output = execute_tool(block, TOOL_HANDLERS)
             results.append({
                 "type": "tool_result",
