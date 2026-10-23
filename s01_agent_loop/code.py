@@ -91,7 +91,7 @@ def agent_loop(messages: list):
         )
 
         # Append assistant turn
-        messages.append({"role": "assistant", "content": response.content})
+        messages.append({"role": "assistant", "content": response.content}) # _________每个 tool_use
 
         # If the model didn't call a tool, we're done
         if response.stop_reason != "tool_use":
@@ -99,7 +99,8 @@ def agent_loop(messages: list):
 
         # Execute each tool call, collect results
         results = []
-        for block in response.content:
+        # 一次response.content，可能产生多个工具调用；去汇总所有工具调用的结果
+        for block in response.content: 
             if block.type == "tool_use":
                 print(f"\033[33m$ {block.input['command']}\033[0m")
                 # 这里写死了调用某个工具
@@ -112,7 +113,8 @@ def agent_loop(messages: list):
                 })
 
         # Feed tool results back, loop continues
-        messages.append({"role": "user", "content": results})
+        # 把所有工具调用的结果，，追加到messages，反馈给模型
+        messages.append({"role": "user", "content": results}) # _________一定紧跟一个 results
 
 
 # -- Entry point --

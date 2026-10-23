@@ -1,5 +1,7 @@
 # Learn Claude Code -- 真正的 Agent Harness 工程
 
+飞书云文档：https://my.feishu.cn/docx/LxlbdrbAxoQEpZx0H8mc5lKonZf
+
 [English](./README.md) | [中文](./README-zh.md) | [日本語](./README-ja.md)
 
 ## Agency 来自模型，Agent 产品 = 模型 + Harness
@@ -16,7 +18,7 @@ Agent 的核心是一个神经网络 -- Transformer、RNN、一个被训练出�
 
 历史已经写好了铁证：
 
-- **2013 -- DeepMind DQN 玩 Atari。** 一个神经网络，只接收原始像素和游戏分数，学会了 7 款 Atari 2600 游戏 -- 超越所有先前算法，在其中 3 款上击败人类专家。到 2015 年，同一架构扩展到 [49 款游戏，达到职业人类测试员水平](https://www.nature.com/articles/nature14236)，论文发表在 *Nature*。没有游戏专属规则。没有决策树。一个模型，从经验中学习。那个模型就是 agent。
+- **2013 -- DeepMind DQN 玩 Atari。** 一个神经网络，只接收原始像素和游戏分数，学会了 7 款 Atari 2600 游戏 -- 超越所有先前算法，在其中 3 款上击败人类专家。到 2015 年，同一架构扩展到 [49 款游戏，达到职业人类测试员水平](https://www.nature.com/articles/nature14236)，论文发表在 _Nature_。没有游戏专属规则。没有决策树。一个模型，从经验中学习。那个模型就是 agent。
 
 - **2019 -- OpenAI Five 征服 Dota 2。** 五个神经网络，在 10 个月内与自己对战了 [45,000 年的 Dota 2](https://openai.com/index/openai-five-defeats-dota-2-world-champions/)，在旧金山直播赛上 2-0 击败了 **OG** -- TI8 世界冠军。随后的公开竞技场中，AI 在 42,729 场比赛中胜率 99.4%。没有脚本化的策略。没有元编程的团队协调逻辑。模型完全通过自我对弈学会了团队协作、战术和实时适应。
 
@@ -88,7 +90,7 @@ Harness = Tools + Knowledge + Observation + Action Interfaces + Permissions
 
 为什么这个仓库专门拆解 Claude Code？
 
-因为 Claude Code 是我们所见过的最优雅、最完整的 agent harness 实现。不是因为某个巧妙的技巧，而是因为它 *没做* 的事：它没有试图成为 agent 本身。它没有强加僵化的工作流。它没有用精心设计的决策树去替模型做判断。它给模型提供了工具、知识、上下文管理和权限边界 -- 然后让开了。
+因为 Claude Code 是我们所见过的最优雅、最完整的 agent harness 实现。不是因为某个巧妙的技巧，而是因为它 _没做_ 的事：它没有试图成为 agent 本身。它没有强加僵化的工作流。它没有用精心设计的决策树去替模型做判断。它给模型提供了工具、知识、上下文管理和权限边界 -- 然后让开了。
 
 把 Claude Code 剥到本质来看：
 
@@ -162,39 +164,39 @@ Claude Code = 一个 agent loop
 **17 个递进式课程, 从简单循环到目标闭环。**
 **每个课程添加一个 harness 机制。每个机制有一句格言。**
 
-> **s01** &nbsp; *"One loop & Bash is all you need"* &mdash; 一个工具 + 一个循环 = 一个 Agent
+> **s01** &nbsp; _"One loop & Bash is all you need"_ &mdash; 一个工具 + 一个循环 = 一个 Agent
 >
-> **s02** &nbsp; *"加一个工具, 只加一个 handler"* &mdash; 循环不用动, 新工具注册进 dispatch map 就行
+> **s02** &nbsp; _"加一个工具, 只加一个 handler"_ &mdash; 循环不用动, 新工具注册进 dispatch map 就行
 >
-> **s03** &nbsp; *"先划边界, 再给自由"* &mdash; 先判断操作能不能做，要不要问用户
+> **s03** &nbsp; _"先划边界, 再给自由"_ &mdash; 先判断操作能不能做，要不要问用户
 >
-> **s04** &nbsp; *"挂在循环上, 不写进循环里"* &mdash; 在工具前后留插口，不改主循环也能扩展
+> **s04** &nbsp; _"挂在循环上, 不写进循环里"_ &mdash; 在工具前后留插口，不改主循环也能扩展
 >
-> **s05** &nbsp; *"没有计划的 agent 走哪算哪"* &mdash; 先列步骤再动手, 完成率翻倍
+> **s05** &nbsp; _"没有计划的 agent 走哪算哪"_ &mdash; 先列步骤再动手, 完成率翻倍
 >
 > **s06** &nbsp; 给子任务全新的 `messages[]`，最终文本作为一条工具结果返回
 >
-> **s07** &nbsp; *"用到时再加载, 别全塞 prompt 里"* &mdash; 技能先列目录，用到时再展开
+> **s07** &nbsp; _"用到时再加载, 别全塞 prompt 里"_ &mdash; 技能先列目录，用到时再展开
 >
-> **s08** &nbsp; *"上下文总会满, 要有办法腾地方"* &mdash; 四步压缩，先整理工具结果，仍然超限时再生成历史摘要
+> **s08** &nbsp; _"上下文总会满, 要有办法腾地方"_ &mdash; 四步压缩，先整理工具结果，仍然超限时再生成历史摘要
 >
-> **s09** &nbsp; *"记住该记的, 忘掉该忘的"* &mdash; 三个子系统: 筛选、提取、整理
+> **s09** &nbsp; _"记住该记的, 忘掉该忘的"_ &mdash; 三个子系统: 筛选、提取、整理
 >
-> **s10** &nbsp; *"大目标拆成小任务, 排好序, 持久化"* &mdash; 文件持久化的任务图, 多 agent 协作的基础
+> **s10** &nbsp; _"大目标拆成小任务, 排好序, 持久化"_ &mdash; 文件持久化的任务图, 多 agent 协作的基础
 >
-> **s11** &nbsp; *"慢操作丢后台, agent 继续思考"* &mdash; 后台线程跑命令, 完成后注入通知
+> **s11** &nbsp; _"慢操作丢后台, agent 继续思考"_ &mdash; 后台线程跑命令, 完成后注入通知
 >
-> **s12** &nbsp; *"定时触发, 不需要人推"* &mdash; 按时间自动触发任务
+> **s12** &nbsp; _"定时触发, 不需要人推"_ &mdash; 按时间自动触发任务
 >
-> **s13** &nbsp; *"一个 Agent 顾不过来，就让队友分工协作"* &mdash; 持久队友协作、认领就绪任务，并使用任务绑定的工作目录
+> **s13** &nbsp; _"一个 Agent 顾不过来，就让队友分工协作"_ &mdash; 持久队友协作、认领就绪任务，并使用任务绑定的工作目录
 >
-> **s14** &nbsp; *"能力不够? 插上 MCP"* &mdash; 把外部工具接进同一个工具池
+> **s14** &nbsp; _"能力不够? 插上 MCP"_ &mdash; 把外部工具接进同一个工具池
 >
-> **s15** &nbsp; *"多种机制，一个循环"* &mdash; 集成示例用到的机制归到同一个 harness
+> **s15** &nbsp; _"多种机制，一个循环"_ &mdash; 集成示例用到的机制归到同一个 harness
 >
-> **s16** &nbsp; *"编排形状固定时，就把它写进代码"* &mdash; 保存好的 workflow 使用 journal 续跑
+> **s16** &nbsp; _"编排形状固定时，就把它写进代码"_ &mdash; 保存好的 workflow 使用 journal 续跑
 >
-> **s17** &nbsp; *"目标决定循环什么时候真正结束"* &mdash; 每次准备停止时都由独立判断器审查；目标不可能、执行失败或超过续跑上限时把控制权交还用户
+> **s17** &nbsp; _"目标决定循环什么时候真正结束"_ &mdash; 每次准备停止时都由独立判断器审查；目标不可能、执行失败或超过续跑上限时把控制权交还用户
 
 ---
 
@@ -240,21 +242,21 @@ def agent_loop(messages):
 
 ### 旧版到新版的对应关系
 
-| 旧 12 章版本 | 新 17 章版本 | 主题 |
-|---|---|---|
-| 旧 s01 | 新 s01 | Agent Loop |
-| 旧 s02 | 新 s02 | Tool Use |
-| 旧 s03 | 新 s05 | TodoWrite |
-| 旧 s04 | 新 s06 | Subagent |
-| 旧 s05 | 新 s07 | Skill Loading |
-| 旧 s06 | 新 s08 | Context Compact |
-| 旧 s07 | 新 s10 | Task System |
-| 旧 s08 | 新 s11 | Background Tasks |
-| 旧 s09 | 新 s13 | Agent Teams |
-| 旧 s10 | 新 s13 | Team Protocols |
-| 旧 s11 | 新 s13 | 自主认领任务 |
-| 旧 s12 | 新 s13 | 任务绑定的 Worktree |
-| 新版新增 | s03、s04、s09、s12、s14、s15、s16、s17 | Permission、Hooks、Memory、Cron、MCP、Agent Harness 集成、Workflow Runtime、Goal Loop |
+| 旧 12 章版本 | 新 17 章版本                           | 主题                                                                                  |
+| ------------ | -------------------------------------- | ------------------------------------------------------------------------------------- |
+| 旧 s01       | 新 s01                                 | Agent Loop                                                                            |
+| 旧 s02       | 新 s02                                 | Tool Use                                                                              |
+| 旧 s03       | 新 s05                                 | TodoWrite                                                                             |
+| 旧 s04       | 新 s06                                 | Subagent                                                                              |
+| 旧 s05       | 新 s07                                 | Skill Loading                                                                         |
+| 旧 s06       | 新 s08                                 | Context Compact                                                                       |
+| 旧 s07       | 新 s10                                 | Task System                                                                           |
+| 旧 s08       | 新 s11                                 | Background Tasks                                                                      |
+| 旧 s09       | 新 s13                                 | Agent Teams                                                                           |
+| 旧 s10       | 新 s13                                 | Team Protocols                                                                        |
+| 旧 s11       | 新 s13                                 | 自主认领任务                                                                          |
+| 旧 s12       | 新 s13                                 | 任务绑定的 Worktree                                                                   |
+| 新版新增     | s03、s04、s09、s12、s14、s15、s16、s17 | Permission、Hooks、Memory、Cron、MCP、Agent Harness 集成、Workflow Runtime、Goal Loop |
 
 ## 课程边界
 
@@ -304,10 +306,10 @@ flowchart TD
     classDef stage4 fill:#FCE4EC,stroke:#C2185b,stroke-width:2px,color:#880E4F,rx:12,ry:12,text-align:left
     classDef stage5 fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C,rx:12,ry:12,text-align:left
     classDef stage6 fill:#E0F7FA,stroke:#0097A7,stroke-width:2px,color:#006064,rx:12,ry:12,text-align:left
-    
+
     %% 背景框样式
     classDef groupBox fill:#F8F9FA,stroke:#CED4DA,stroke-width:2px,stroke-dasharray: 5 5,rx:15,ry:15,color:#495057
-    
+
     %% 第一层：1-3阶段
     subgraph Phase1 ["🌱 阶段 1-3：基础能力构建（从简单到复杂）"]
         direction LR
@@ -348,24 +350,25 @@ flowchart TD
 
 ## 全部章节
 
-| 章节 | 主题 | 关键概念 |
-|---|---|---|
-| [s01](./s01_agent_loop/) | Agent Loop | `messages` / `while True` / `stop_reason` |
-| [s02](./s02_tool_use/) | Tool Use | `TOOL_HANDLERS` / dispatch map / 并发 |
-| [s03](./s03_permission/) | Permission | `PermissionRule` / 审批管线 |
-| [s04](./s04_hooks/) | Hooks | `PreToolUse` / `PostToolUse` / 扩展点 |
-| [s05](./s05_todo_write/) | TodoWrite | `TodoItem` / 先计划后执行 |
-| [s06](./s06_subagent/) | Subagent | `fresh messages[]` / 上下文隔离 |
-| [s07](./s07_skill_loading/) | Skill Loading | `SkillLoader` / 技能目录 / 按需注入 |
-| [s08](./s08_context_compact/) | Context Compact | budget / snip / micro / summary 四步压缩 |
-| [s09](./s09_memory/) | Memory | selection / extraction / consolidation |
-| [s10](./s10_task_system/) | Task System | `TaskRecord` / `blockedBy` / 磁盘持久化 |
-| [s11](./s11_background_tasks/) | Background Tasks | 线程执行 / 通知队列 |
-| [s12](./s12_cron_scheduler/) | Cron Scheduler | 持久化调度 / 会话级触发 |
-| [s13](./s13_agent_teams/) | Agent Teams | 持久队友 / 原子认领 / 任务绑定的 Worktree / 类型协议 |
-| [s14](./s14_mcp_plugin/) | MCP Plugin | 工具发现 / 命名空间 / 工具池组装 |
+| 章节                             | 主题               | 关键概念                                                |
+| -------------------------------- | ------------------ | ------------------------------------------------------- |
+| [s01](./s01_agent_loop/)         | Agent Loop         | `messages` / `while True` / `stop_reason`               |
+| [s02](./s02_tool_use/)           | Tool Use           | `TOOL_HANDLERS` / dispatch map / 并发                   |
+| [s03](./s03_permission/)         | Permission         | `PermissionRule` / 审批管线                             |
+| [s04](./s04_hooks/)              | Hooks              | `PreToolUse` / `PostToolUse` / 扩展点                   |
+| [s05](./s05_todo_write/)         | TodoWrite          | `TodoItem` / 先计划后执行                               |
+| [s06](./s06_subagent/)           | Subagent           | `fresh messages[]` / 上下文隔离                         |
+| [s07](./s07_skill_loading/)      | Skill Loading      | `SkillLoader` / 技能目录 / 按需注入                     |
+| [s08](./s08_context_compact/)    | Context Compact    | budget / snip / micro / summary 四步压缩                |
+| [s09](./s09_memory/)             | Memory             | selection / extraction / consolidation                  |
+| [s10](./s10_task_system/)        | Task System        | `TaskRecord` / `blockedBy` / 磁盘持久化                 |
+| [s11](./s11_background_tasks/)   | Background Tasks   | 线程执行 / 通知队列                                     |
+| [s12](./s12_cron_scheduler/)     | Cron Scheduler     | 持久化调度 / 会话级触发                                 |
+| [s13](./s13_agent_teams/)        | Agent Teams        | 持久队友 / 原子认领 / 任务绑定的 Worktree / 类型协议    |
+| [s14](./s14_mcp_plugin/)         | MCP Plugin         | 工具发现 / 命名空间 / 工具池组装                        |
 | [s15](./s15_integrated_harness/) | Agent Harness 集成 | 工具、运行时上下文、任务、团队、调度和 MCP 归到一个循环 |
-| [s16](./s16_workflow_runtime/) | Workflow Runtime | 脚本编排 / 生命周期事件 / journal 续跑 |
+| [s16](./s16_workflow_runtime/)   | Workflow Runtime   | 脚本编排 / 生命周期事件 / journal 续跑                  |
+| [s17](./s17_goal_loop/)          | Goal Loop          | 目标闸门 / 对话判断 / 自动续轮                          / 生命周期事件 / journal 续跑 |
 | [s17](./s17_goal_loop/) | Goal Loop | 目标闸门 / 对话判断 / 自动续轮 |
 
 ## 项目结构
